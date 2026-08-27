@@ -12,6 +12,7 @@
   },
   "homepage": "https://github.com/nymo/gulp-tinypng-extended#readme",
   "scripts": {
+    "lint": "eslint .",
     "test": "mocha"
   },
   "author": {
@@ -50,7 +51,10 @@
     "yargs-parser": "^13.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "chai": "^4.2.0",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
     "gulp": "^4.0.2",
     "mocha": "^8.1.3",
     "nock": "^10.0.6"
