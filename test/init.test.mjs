@@ -1,9 +1,37 @@
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { describe, it as vitestIt, beforeAll, afterAll, afterEach, expect } from 'vitest';
+
+const require = createRequire(import.meta.url);
+
+function it(name, test) {
+	if (test.length === 0) return vitestIt(name, test);
+
+	return vitestIt(name, function() {
+		return new Promise(function(resolve, reject) {
+			try {
+				test(function(error) {
+					try {
+						if (error) reject(error);
+						else resolve();
+					} catch(error) {
+						reject(error);
+					}
+				});
+			} catch(error) {
+				reject(error);
+			}
+		});
+	}, 30000);
+}
+
 process.env.NODE_ENV = 'test';
+process.env.NO_PROXY = 'localhost,127.0.0.1';
+process.env.no_proxy = process.env.NO_PROXY;
 
 var fs = require('fs'),
 	spawn = require('child_process').spawn,
 	crypto = require('crypto'),
-	expect = require('chai').expect,
 	nock = require('nock'),
 	Vinyl = require('vinyl'),
 
@@ -13,7 +41,7 @@ var fs = require('fs'),
 	mockTinyPngApi = require('./mock-api');
 
 var key = 'KHOsJMrP6w-X3FVuyXdevV-vCnDDbqo9',
-	cwd = __dirname,
+	cwd = fileURLToPath(new URL('.', import.meta.url)), 
 	TestFile = function(type) {
 		var file = cwd + '/assets/image' + (type ? '_' + type : '') + '.png';
 
@@ -30,20 +58,20 @@ describe('tinypng', function() {
 		var struct = ['conf', 'init', 'stream', 'request', 'hasher', 'utils', 'hash', 'stats'],
 			inst = new TinyPNG(key);
 
-		expect(inst).to.have.all.keys(struct);
+		expect(Object.keys(inst).sort()).toEqual(struct.sort());
 	});
 
 	it('transforms key into config object', function() {
 		var inst = new TinyPNG('test_string_0');
 
-		expect(inst.conf.options.key).to.equal('test_string_0');
+		expect(inst.conf.options.key).toBe('test_string_0');
 	});
 
 	it('init hashing object', function() {
 		var struct = ['sigFile', 'sigs', 'calc', 'update', 'compare', 'populate', 'write'],
 			inst = new TinyPNG(key);
 
-		expect(inst.hash).to.have.all.keys(struct);
+		expect(Object.keys(inst.hash).sort()).toEqual(struct.sort());
 	});
 
 	describe('#init', function() {
@@ -53,10 +81,10 @@ describe('tinypng', function() {
 				sigFile: 'test_string_1'
 			});
 
-			expect(inst.conf.options.key).to.equal('test_string_0');
-			expect(inst.conf.options.sigFile).to.equal('test_string_1');
+			expect(inst.conf.options.key).toBe('test_string_0');
+			expect(inst.conf.options.sigFile).toBe('test_string_1');
 
-			expect(inst.conf.token).to.equal(Buffer.from('api:test_string_0').toString('base64'));
+			expect(inst.conf.token).toBe(Buffer.from('api:test_string_0').toString('base64'));
 		});
 
 		it('throws error on missing API key', function() {
@@ -77,7 +105,6 @@ describe('tinypng', function() {
 
 		describe('#upload', function() {
 			it('uploads and returns object', function(done) {
-				this.timeout(20000);
 
 				if(dry) return done();
 
@@ -92,7 +119,6 @@ describe('tinypng', function() {
 			});
 
 			it('uploads and and tries to retry on bad gateway error', function(done) {
-				this.timeout(20010);
 
 				var gateway = nock('https://api.tinify.com')
 								.post('/shrink')
@@ -107,7 +133,6 @@ describe('tinypng', function() {
 			});
 
 			it('upload empty file should throw error, skip and not break the plugin', function(done) {
-				this.timeout(2000);
 
 				inst.request(empty_image).upload(function(err, data) {
 					expect(err).to.be.instanceof(Error);
@@ -120,9 +145,8 @@ describe('tinypng', function() {
 
 		describe('#download', function() {
 			it('downloads and returns correct buffer', function(done) {
-				this.timeout(20000);
 
-				nock('http://localhost')
+				nock('http://localhost:80')
 								.get('/files/1Mb.dat')
 								.reply(200, fs.readFileSync(cwd + '/assets/download.dat'));
 
@@ -147,7 +171,6 @@ describe('tinypng', function() {
 
 		describe('#get', function() {
 			it('returns compressed image', function(done) {
-				this.timeout(30000);
 
 				if(dry) return done();
 
@@ -307,12 +330,12 @@ describe('tinypng', function() {
 describe('tinypng gulp', function() {
 	var target = cwd + '/assets/tmp/image.png';
 
-	before(function() {
+	beforeAll(function() {
 		process.env.TINYPNG_SIGS = true;
 		process.env.TINYPNG_KEY = key;
 	});
 
-	after(function() {
+	afterAll(function() {
 		process.env.TINYPNG_SIGS = false;
 	});
 
@@ -323,10 +346,9 @@ describe('tinypng gulp', function() {
 	});
 
 	it('returns compressed files', function(done) {
-		this.timeout(30000);
 		if(dry) return done();
 
-		file = new TestFile();
+		var file = new TestFile();
 
 		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng'], {
 			env: Object.assign({}, process.env, {
@@ -343,7 +365,6 @@ describe('tinypng gulp', function() {
 	});
 
 	it('ignores files on the cli', function(done) {
-		this.timeout(30000);
 
 		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng', '--ignore', '*ge.png'], {
 			env: Object.assign({}, process.env, {
@@ -359,7 +380,6 @@ describe('tinypng gulp', function() {
 	});
 
 	it('forces files on the cli', function(done) {
-		this.timeout(30000);
 		if(dry) return done();
 
 		var inst = new TinyPNG(key),
