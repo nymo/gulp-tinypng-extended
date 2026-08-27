@@ -13,7 +13,7 @@ export default [
       sourceType: 'commonjs',
       globals: {
         ...globals.node,
-        ...globals.mocha
+        ...globals.vitest
       }
     },
     rules: {
