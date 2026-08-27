@@ -169,11 +169,3 @@ How many milliseconds to delay before reattempting a failed upload.
 ## License
 
 Please refer to the [LICENSE](https://github.com/nymo/gulp-tinypng-extended/blob/master/LICENSE) file.
-
-**Original license:**
-
->MIT © [Stan Hutcheon](https://github.com/stnvh)
->MIT © [Gaurav Jassal](http://gaurav.jassal.me)
-
-[npm]: https://www.npmjs.com/package/gulp-tinypng-extended
-[travis]: https://travis-ci.org/nymo/gulp-tinypng-extended
