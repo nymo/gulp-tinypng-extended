@@ -1,6 +1,7 @@
-[![Version](https://img.shields.io/npm/v/gulp-tinypng-extended.svg)][npm]
-[![Downloaded](https://img.shields.io/npm/dm/gulp-tinypng-extended.svg)][npm]
-[![Build](https://img.shields.io/travis/nymo/gulp-tinypng-extended.svg)][travis]
+[![NPM Downloads](https://img.shields.io/npm/dm/gulp-tinypng-extended?label=NPM%20Downloads)](https://www.npmjs.com/package/gulp-tinypng-extended)
+[![NPM Version](https://img.shields.io/npm/v/gulp-tinypng-extended?label=NPM%20Version)](https://www.npmjs.com/package/gulp-tinypng-extended)
+[![Stable Release](https://img.shields.io/github/v/tag/nymo/gulp-tinypng-extended?sort=semver&label=Stable%20Release)](https://github.com/nymo/gulp-tinypng-extended/tags)
+[![SemVer](https://img.shields.io/badge/SemVer-observed-brightgreen)](CHANGELOG.md)
 
 # gulp-tinypng-extended
 
@@ -31,6 +32,14 @@ To run tests:
 ```
 npm test
 ```
+
+To generate a local code coverage report:
+
+```
+npm run coverage
+```
+
+The command prints a summary and writes LCOV output to `coverage/lcov.info`.
 
 To run the linter:
 
