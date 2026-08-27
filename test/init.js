@@ -9,7 +9,8 @@ var fs = require('fs'),
 
 	dry = process.env.PNG_DRY ? true : false,
 
-    TinyPNG = require('../index');
+	TinyPNG = require('../index'),
+	mockTinyPngApi = require('./mock-api');
 
 var key = 'KHOsJMrP6w-X3FVuyXdevV-vCnDDbqo9',
 	cwd = __dirname,
@@ -80,10 +81,12 @@ describe('tinypng', function() {
 
 				if(dry) return done();
 
+				mockTinyPngApi();
 				inst.request(image).upload(function(err, data) {
 					expect(err).to.not.be.instanceof(Error);
 					expect(data).to.have.all.keys(['url', 'count']);
 
+					nock.cleanAll();
 					done();
 				});
 			});
@@ -119,10 +122,15 @@ describe('tinypng', function() {
 			it('downloads and returns correct buffer', function(done) {
 				this.timeout(20000);
 
-				inst.request(new TestFile()).download('http://ovh.net/files/1Mb.dat', function(err, data) {
-					expect(err).to.not.be.instanceof(Error);
-					expect(data.toString()).to.equal(fs.readFileSync(cwd + '/assets/download.dat').toString());
+				nock('http://localhost')
+								.get('/files/1Mb.dat')
+								.reply(200, fs.readFileSync(cwd + '/assets/download.dat'));
 
+				inst.request(new TestFile()).download('http://localhost/files/1Mb.dat', function(err, data) {
+					expect(err).to.not.be.instanceof(Error);
+					expect(data).to.deep.equal(fs.readFileSync(cwd + '/assets/download.dat'));
+
+					nock.cleanAll();
 					done();
 				});
 			});
@@ -143,10 +151,12 @@ describe('tinypng', function() {
 
 				if(dry) return done();
 
+				mockTinyPngApi();
 				inst.request(image).get(function(err, file) {
 					expect(err).to.not.be.instanceof(Error);
-					expect(file.contents).to.have.length.lessThan(image.contents.length);
+					expect(file.contents).to.deep.equal(fs.readFileSync(cwd + '/assets/image_small.png'));
 
+					nock.cleanAll();
 					done();
 				});
 			});
@@ -318,9 +328,13 @@ describe('tinypng gulp', function() {
 
 		file = new TestFile();
 
-		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng']);
+		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng'], {
+			env: Object.assign({}, process.env, {
+				NODE_OPTIONS: '--require ' + cwd + '/mock-api-loader.js'
+			})
+		});
 
-		sh.stdout.on('end', function() {
+		sh.on('close', function() {
 			expect(fs.existsSync(target)).to.equal(true, 'compressed output file created');
 			expect(fs.readFileSync(target)).to.have.length.lessThan(file.contents.length);
 
@@ -331,9 +345,13 @@ describe('tinypng gulp', function() {
 	it('ignores files on the cli', function(done) {
 		this.timeout(30000);
 
-		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng', '--ignore', '*ge.png']);
+		var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng', '--ignore', '*ge.png'], {
+			env: Object.assign({}, process.env, {
+				NODE_OPTIONS: '--require ' + cwd + '/mock-api-loader.js'
+			})
+		});
 
-		sh.stdout.on('end', function() {
+		sh.on('close', function() {
 			expect(fs.existsSync(target)).to.equal(false);
 
 			done();
@@ -352,9 +370,13 @@ describe('tinypng gulp', function() {
 			hash.update(file, md5);
 			hash.write();
 
-			var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng', '--force', '*ge.png']);
+			var sh = spawn('node', ['node_modules/gulp/bin/gulp.js', 'tinypng', '--force', '*ge.png'], {
+				env: Object.assign({}, process.env, {
+					NODE_OPTIONS: '--require ' + cwd + '/mock-api-loader.js'
+				})
+			});
 
-			sh.stdout.on('end', function() {
+			sh.on('close', function() {
 				expect(fs.existsSync(target)).to.equal(true, 'compressed output file created');
 				expect(fs.readFileSync(target)).to.have.length.lessThan(file.contents.length);
 
