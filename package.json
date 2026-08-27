@@ -7,6 +7,10 @@
     "type": "git",
     "url": "https://github.com/nymo/gulp-tinypng-extended.git"
   },
+  "bugs": {
+    "url": "https://github.com/nymo/gulp-tinypng-extended/issues"
+  },
+  "homepage": "https://github.com/nymo/gulp-tinypng-extended#readme",
   "scripts": {
     "test": "mocha"
   },
@@ -15,18 +19,6 @@
     "email": "gp@gregorpanek.de",
     "url": "https://github.com/nymo"
   },
-  "contributors": [
-    {
-      "name": "Stan Hutcheon",
-      "email": "stanutcheon@me.com",
-      "url": "https://github.com/stnvh"
-    },
-    {
-      "name": "Gaurav Jassal",
-      "email": "gaurav@jassal.me",
-      "url": "http://gaurav.jassal.me"
-    }
-  ],
   "keywords": [
     "gulpplugin",
     "tinypng",
