@@ -3,7 +3,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['node_modules/**', 'test/assets/**']
+    ignores: ['node_modules/**', 'test/assets/**', 'coverage/**']
   },
   {
     files: ['**/*.js'],

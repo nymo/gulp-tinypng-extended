@@ -13,7 +13,8 @@
   "homepage": "https://github.com/nymo/gulp-tinypng-extended#readme",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "coverage": "vitest run --coverage --coverage.include=index.js --coverage.exclude=test/** --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=json-summary"
   },
   "author": {
     "name": "Gregor Panek",
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.9.1",
     "globals": "^17.11.0",
     "gulp": "^4.0.2",
