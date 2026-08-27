@@ -32,6 +32,12 @@ To run tests:
 npm test
 ```
 
+To run the linter:
+
+```
+npm run lint
+```
+
 ## Example
 
 ```js
