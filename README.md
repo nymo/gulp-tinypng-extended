@@ -21,6 +21,31 @@
 - Handles API errors without stopping the entire image pipeline when used with `gulp-plumber`.
 - Includes retry support for temporary Tinify/API and network failures.
 - Supports PNG, JPEG, WebP, and AVIF input when those extensions are included in the source glob.
+- Reports Tinify's current monthly compression count in build summaries, helping teams monitor API usage and quota.
+
+## Standout features
+
+### Modern image-format support
+
+Process modern image assets alongside traditional formats in the same Gulp task:
+
+```js
+gulp.src('src/images/**/*.{png,jpg,jpeg,webp,avif}')
+  .pipe(tinypng({ key: process.env.TINYPNG_KEY }))
+  .pipe(gulp.dest('dist/images'));
+```
+
+WebP and AVIF files are sent to the official Tinify API as buffers and returned through the normal Vinyl stream. Existing paths and extensions are preserved, so adding modern formats does not require a separate pipeline.
+
+### Built-in API usage visibility
+
+Enable `summarize: true` to see both file savings and the Tinify account's current monthly compression count:
+
+```text
+Skipped: 2 images, Retries: 0, Compressed: 4 images, Savings: 18.42 KB (ratio: 0.6832), Monthly compressions: 27
+```
+
+This makes API usage visible in local builds and CI logs without requiring a separate Tinify API request. The monthly count is account-wide, not limited to the current task.
 
 ## Requirements
 
@@ -86,8 +111,6 @@ npx gulp images
 ```
 
 The first run uploads each image. Later runs skip images whose source content has not changed when `sigFile` is enabled. The plugin preserves each file's original path and extension; it does not convert or resize images.
-
-## Features
 
 ### Signature caching
 
@@ -235,8 +258,10 @@ The older spelling `summarise` is also accepted for compatibility.
 Example summary:
 
 ```text
-Skipped: 2 images, Retries: 0, Compressed: 4 images, Savings: 18.42 KB (ratio: 0.6832)
+Skipped: 2 images, Retries: 0, Compressed: 4 images, Savings: 18.42 KB (ratio: 0.6832), Monthly compressions: 27
 ```
+
+`Monthly compressions` is the account-wide compression count returned by Tinify for the current month. It is not the number of files processed by the current Gulp stream. The value is shown when Tinify returns it and `summarize` is enabled.
 
 ## Configuration reference
 

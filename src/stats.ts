@@ -9,6 +9,7 @@ function createStats() {
         compressed: 0,
         skipped: 0,
         retries: 0,
+        compressionCount: null,
         retried: []
     };
 }
