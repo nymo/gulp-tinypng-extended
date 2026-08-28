@@ -1,37 +1,42 @@
-var test = process.env.NODE_ENV == 'test',
-    through = require('through2'),
-    throughParallel = require('through2-concurrent'),
-    chalk = require('ansi-colors'),
-    tinify = require('tinify'),
-    path = require('path'),
-    util = require('util'),
-    fs = require('fs'),
-    PluginError = require('plugin-error'),
-    parseArgs = require('minimist')(process.argv.slice(2)),
-    log = require('fancy-log'),
-    optionsModule = require('./options'),
-    createStats = require('./stats'),
-    SignatureStore = require('./signature-store'),
-    createUtils = require('./utils');
+import through from 'through2';
+import throughParallel from 'through2-concurrent';
+import chalk from 'ansi-colors';
+import tinify from 'tinify';
+import util from 'node:util';
+import fs from 'node:fs';
+import PluginError from 'plugin-error';
+import minimist from 'minimist';
+import log from 'fancy-log';
+import { DEFAULT_OPTIONS, normalizeOptions, TinyPNGOptions } from './options';
+import createStats from './stats';
+import createSignatureStore from './signature-store';
+import createUtils from './utils';
 
-var PLUGIN_NAME = 'gulp-tinypng-extended',
-    DEFAULT_OPTIONS = optionsModule.DEFAULT_OPTIONS,
-    normalizeOptions = optionsModule.normalizeOptions;
+const test = process.env.NODE_ENV === 'test';
+const parseArgs = minimist(process.argv.slice(2));
+const PLUGIN_NAME = 'gulp-tinypng-extended';
+interface PluginInstance {
+    stream(): NodeJS.ReadWriteStream;
+}
 
-/**
- * TinyPNG class
+type ValidationCallback = (error?: Error) => void;
 
- */
-function TinyPNG(opt: string | TinyPNG.Options): NodeJS.ReadWriteStream;
-function TinyPNG(opt: any, obj?: any): any {
+interface TinypngPlugin {
+    (options: string | TinyPNGOptions): NodeJS.ReadWriteStream;
+    validate(key: string): Promise<void>;
+    validate(key: string, callback: ValidationCallback): void;
+}
+
+function TinyPNG(opt: string | TinyPNGOptions): NodeJS.ReadWriteStream;
+function TinyPNG(opt: unknown, obj?: boolean): unknown {
 
     if(!(this instanceof TinyPNG)) {
-        var instance: any = Object.create(TinyPNG.prototype);
+        const instance = Object.create(TinyPNG.prototype) as PluginInstance;
         TinyPNG.call(instance, opt, true);
         return test ? instance : instance.stream();
     }
 
-    var self = this;
+    const getPlugin = () => this;
 
     this.conf = {
         token: null,
@@ -50,8 +55,9 @@ function TinyPNG(opt: any, obj?: any): any {
         this.conf.token = Buffer.from('api:' + opt.key).toString('base64'); // compatibility value
         tinify.key = opt.key;
         if(tinify.Client) {
-            tinify.Client.RETRY_COUNT = Math.max(0, opt.retryAttempts - 1);
-            tinify.Client.RETRY_DELAY = opt.retryDelay;
+            const client = tinify.Client as typeof tinify.Client & { RETRY_COUNT: number; RETRY_DELAY: number };
+            client.RETRY_COUNT = Math.max(0, opt.retryAttempts - 1);
+            client.RETRY_DELAY = opt.retryDelay;
         }
         this.hash = new this.hasher(opt.sigFile).populate(); // init hasher class
 
@@ -59,11 +65,11 @@ function TinyPNG(opt: any, obj?: any): any {
     };
 
     this.stream = function() {
-        var self = this,
+        const getStream = () => this,
             opt = this.conf.options;
 
         return (opt.parallel ? throughParallel : through).obj({maxConcurrency: opt.parallelMax}, function(file, enc, cb) {
-            if(self.utils.glob(file, opt.ignore)) return cb();
+            if(getStream().utils.glob(file, opt.ignore)) return cb();
 
             if(file.isNull()) {
                 return cb();
@@ -75,45 +81,45 @@ function TinyPNG(opt: any, obj?: any): any {
             }
 
             if(file.isBuffer()) {
-                var hash = null;
+                let hash = null;
 
-                if(opt.sigFile && !self.utils.glob(file, opt.force)) {
-                    var result = self.hash.compare(file);
+                if(opt.sigFile && !getStream().utils.glob(file, opt.force)) {
+                    const result = getStream().hash.compare(file);
 
                     hash = result.hash;
 
                     if(result.match) {
-                        self.utils.log('[skipping] ' + chalk.green('✔ ') + file.relative);
-                        self.stats.skipped++;
+                        getStream().utils.log('[skipping] ' + chalk.green('✔ ') + file.relative);
+                        getStream().stats.skipped++;
 
                         return cb();
                     }
                 }
 
-                self.request(file).get(function(err, tinyFile) {
+                getStream().request(file).get(function(err, tinyFile) {
                     if(err) {
                         this.emit('error', new PluginError(PLUGIN_NAME, err));
                         return cb();
                     }
 
-                    self.utils.log('[compressing] ' + chalk.green('✔ ') + file.relative + chalk.gray(' (done)'));
-                    self.stats.compressed++;
+                    getStream().utils.log('[compressing] ' + chalk.green('✔ ') + file.relative + chalk.gray(' (done)'));
+                    getStream().stats.compressed++;
 
-                    self.stats.total.in += file.contents.toString().length;
-                    self.stats.total.out += tinyFile.contents.toString().length;
+                    getStream().stats.total.in += file.contents.toString().length;
+                    getStream().stats.total.out += tinyFile.contents.toString().length;
 
                     if(opt.sigFile) {
-                        var curr = {
+                        const curr = {
                             file: file,
                             hash: hash
                         };
 
                         if(opt.sameDest) {
                             curr.file = tinyFile;
-                            curr.hash = self.hash.calc(tinyFile);
+                            curr.hash = getStream().hash.calc(tinyFile);
                         }
 
-                        self.hash.update(curr.file, curr.hash);
+                        getStream().hash.update(curr.file, curr.hash);
                     }
                     if (opt.keepOriginal === false) {
                         fs.writeFileSync(file.path, tinyFile.contents);
@@ -127,23 +133,23 @@ function TinyPNG(opt: any, obj?: any): any {
         })
         .on('error', function(err) {
             console.log(err.message);
-            self.stats.skipped++;
-            self.utils.log(err.message);
+            getStream().stats.skipped++;
+            getStream().utils.log(err.message);
         })
         .on('end', function() {
             if(opt.sigFile) {
                 // write sigs after complete or but also when error occured in order to keep track of already compressed files
-                self.hash.write();
+                getStream().hash.write();
             }
             if(opt.summarize) {
-                var stats = self.stats,
-                    info = util.format('Skipped: %s image%s, Retries: %s, Compressed: %s image%s, Savings: %s (ratio: %s)',
+                const stats = getStream().stats;
+                let info = util.format('Skipped: %s image%s, Retries: %s, Compressed: %s image%s, Savings: %s (ratio: %s)',
                         stats.skipped,
                         stats.skipped == 1 ? '' : 's',
                         stats.retries,
                         stats.compressed,
                         stats.compressed == 1 ? '' : 's',
-                        (self.utils.prettySize(stats.total.in - stats.total.out)),
+                        (getStream().utils.prettySize(stats.total.in - stats.total.out)),
                         (stats.total.in ? Math.round(stats.total.out / stats.total.in * 10000) / 10000 : 0)
                     );
 
@@ -151,28 +157,28 @@ function TinyPNG(opt: any, obj?: any): any {
                     info += util.format(', Monthly compressions: %s', stats.compressionCount);
                 }
 
-                self.utils.log(info, true);
+                getStream().utils.log(info, true);
 
                 if(stats.retries > 0) {
-                    self.utils.log('Retry Attempts:', true);
+                    getStream().utils.log('Retry Attempts:', true);
                     stats.retried.forEach(function(item) {
-                        self.utils.log(item.file + ': ' + item.attempts + ' attempts', true);
+                        getStream().utils.log(item.file + ': ' + item.attempts + ' attempts', true);
                     });
                 }
             }
         });
     };
 
-    this.request = function(file, cb) {
-        var self = this,
-            compressed;
+    this.request = function(file) {
+        const getRequest = () => this;
+        let compressed;
 
         return {
             file: file,
 
             upload: function(cb) {
-                var file = this.file,
-                    source;
+                const file = this.file;
+                let source;
 
                 if(!file || !file.contents || file.contents.length === 0) {
                     return cb(new Error('Error: Empty or broken images could not be send ' + (file && file.relative || '')));
@@ -180,24 +186,24 @@ function TinyPNG(opt: any, obj?: any): any {
 
                 try {
                     source = tinify.fromBuffer(file.contents);
-                    if(self.conf.options.keepMetadata) {
+                    if(getRequest().conf.options.keepMetadata) {
                         source = source.preserve('copyright', 'creation', 'location');
                     }
 
                     source.toBuffer().then(function(data) {
                         compressed = Buffer.from(data);
                         if(typeof tinify.compressionCount === 'number') {
-                            self.stats.compressionCount = tinify.compressionCount;
+                            getPlugin().stats.compressionCount = tinify.compressionCount;
                         }
                         cb(null, {
                             url: true,
                             count: tinify.compressionCount || 0
                         });
                     }).catch(function(err) {
-                        cb(self.utils.apiError(err, file));
+                        cb(getPlugin().utils.apiError(err, file));
                     });
                 } catch(err) {
-                    cb(self.utils.apiError(err, file));
+                    cb(getPlugin().utils.apiError(err, file));
                 }
             },
 
@@ -211,13 +217,13 @@ function TinyPNG(opt: any, obj?: any): any {
             },
 
             get: function(cb) {
-                var request = this,
-                    file = this.file;
+                const getRequest = () => this;
+                const file = this.file;
 
-                request.upload(function(err) {
+                getRequest().upload(function(err) {
                     if(err) return cb(err, file);
 
-                    var tinyFile = file.clone();
+                    const tinyFile = file.clone();
                     tinyFile.contents = compressed;
                     cb(null, tinyFile);
                 });
@@ -227,47 +233,30 @@ function TinyPNG(opt: any, obj?: any): any {
         };
     };
 
-    this.hasher = SignatureStore;
+    this.hasher = createSignatureStore;
 
     this.utils = createUtils({
         getOptions: function() {
-            return self.conf.options;
+            return getPlugin().conf.options;
         },
         logger: log,
-        PluginError: PluginError,
         pluginName: PLUGIN_NAME
     });
 
     return (obj || test) ? this.init(opt) : this.init(opt).stream();
 }
 
-namespace TinyPNG {
-    export interface Options {
-        key: string;
-        sigFile?: string | false;
-        sameDest?: boolean;
-        keepOriginal?: boolean;
-        keepMetadata?: boolean;
-        force?: boolean | string;
-        ignore?: boolean | string;
-        parallel?: boolean;
-        parallelMax?: number;
-        retryAttempts?: number;
-        retryDelay?: number;
-        log?: boolean;
-        summarize?: boolean;
-        summarise?: boolean;
+const plugin = TinyPNG as unknown as TinypngPlugin;
+
+plugin.validate = ((key: string, callback?: ValidationCallback): Promise<void> | void => {
+    tinify.key = key;
+
+    if (callback) {
+        tinify.validate().then(() => callback(), callback);
+        return;
     }
 
-    export type ValidationCallback = (error?: Error) => void;
+    return tinify.validate();
+}) as TinypngPlugin['validate'];
 
-    export function validate(key: string): Promise<void>;
-    export function validate(key: string, callback: ValidationCallback): void;
-
-    export function validate(key: string, callback?: ValidationCallback): Promise<void> | void {
-        tinify.key = key;
-        return tinify.validate(callback);
-    }
-}
-
-export = TinyPNG;
+export = plugin;

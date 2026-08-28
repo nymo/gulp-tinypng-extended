@@ -1,55 +1,59 @@
-export {};
+import minimatch from 'minimatch';
+import PluginError from 'plugin-error';
 
-var minimatch = require('minimatch');
+export interface UtilityFile {
+    path: string;
+    relative: string;
+}
 
-function createUtils(options) {
-    var getOptions = options.getOptions,
-        logger = options.logger,
-        PluginError = options.PluginError,
-        pluginName = options.pluginName;
+export interface PluginUtils {
+    log(message: string, force?: boolean): PluginUtils;
+    apiError(error: unknown, file: UtilityFile): PluginError;
+    glob(file: UtilityFile, pattern: boolean | string, options?: minimatch.IOptions): boolean;
+    prettySize(bytes: number): string;
+}
 
+interface UtilsOptions {
+    getOptions(): { log?: boolean };
+    logger: (...messages: unknown[]) => void;
+    pluginName: string;
+}
+
+export default function createUtils(options: UtilsOptions): PluginUtils {
     return {
-        log: function(message, force) {
-            var currentOptions = getOptions();
+        log(message, force) {
+            const currentOptions = options.getOptions();
 
-            if(currentOptions.log || force) logger(pluginName, message);
+            if (currentOptions.log || force) options.logger(options.pluginName, message);
 
             return this;
         },
 
-        apiError: function(err, file) {
-            var message = err && err.message || 'Unknown TinyPNG API error',
-                name = err && err.name || 'Error';
+        apiError(error, file) {
+            const originalError = error instanceof Error ? error : new Error(String(error));
+            const message = `${originalError.name} for ${file.relative}: ${originalError.message}`;
 
-            return new PluginError(pluginName, name + ' for ' + file.relative + ': ' + message, {
-                cause: err
-            });
+            return new PluginError(options.pluginName, message);
         },
 
-        glob: function(file, glob, opt) {
-            opt = opt || {};
-            var result = false;
-
-            if(typeof glob === 'boolean') return glob;
+        glob(file, pattern, globOptions = {}) {
+            if (typeof pattern === 'boolean') return pattern;
 
             try {
-                result = minimatch(file.path, glob, opt);
-            } catch(err) {}
-
-            if(!result && !opt.matchBase) {
-                opt.matchBase = true;
-                return this.glob(file, glob, opt);
+                if (minimatch(file.path, pattern, globOptions)) return true;
+                if (!globOptions.matchBase) return minimatch(file.path, pattern, { ...globOptions, matchBase: true });
+            } catch {
+                return false;
             }
-            return result;
+
+            return false;
         },
 
-        prettySize: function(bytes) {
-            if(bytes === 0) return '0.00 B';
+        prettySize(bytes) {
+            if (bytes === 0) return '0.00 B';
 
-            var pos = Math.floor(Math.log(bytes) / Math.log(1024));
-            return (bytes / Math.pow(1024, pos)).toFixed(2) + ' ' + ' KMGTP'.charAt(pos) + 'B';
+            const position = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, position)).toFixed(2)} ${' KMGTP'.charAt(position)}B`;
         }
     };
 }
-
-module.exports = createUtils;

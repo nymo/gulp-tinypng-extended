@@ -1,6 +1,21 @@
-export {};
+export interface TinyPNGOptions {
+    key: string;
+    sigFile?: string | false;
+    sameDest?: boolean;
+    keepOriginal?: boolean;
+    keepMetadata?: boolean;
+    force?: boolean | string;
+    ignore?: boolean | string;
+    parallel?: boolean;
+    parallelMax?: number;
+    retryAttempts?: number;
+    retryDelay?: number;
+    log?: boolean;
+    summarize?: boolean;
+    summarise?: boolean;
+}
 
-var DEFAULT_OPTIONS = {
+export const DEFAULT_OPTIONS = {
     key: '',
     sigFile: false,
     log: false,
@@ -16,19 +31,13 @@ var DEFAULT_OPTIONS = {
     retryDelay: 10000
 };
 
-function normalizeOptions(value, args) {
-    var options = typeof value === 'object' && value !== null ? value : { key: value };
+export function normalizeOptions(value: unknown, args: Record<string, unknown>): TinyPNGOptions {
+    const input = typeof value === 'object' && value !== null ? value as Partial<TinyPNGOptions> : { key: value as string };
+    const options = Object.assign({}, DEFAULT_OPTIONS, input) as TinyPNGOptions;
 
-    options = Object.assign({}, DEFAULT_OPTIONS, options);
-
-    if(!options.force) options.force = args.force || false;
-    if(!options.ignore) options.ignore = args.ignore || false;
+    if(!options.force) options.force = args.force as boolean | string || false;
+    if(!options.ignore) options.ignore = args.ignore as boolean | string || false;
     if(options.summarise) options.summarize = true;
 
     return options;
 }
-
-module.exports = {
-    DEFAULT_OPTIONS: DEFAULT_OPTIONS,
-    normalizeOptions: normalizeOptions
-};
