@@ -58,6 +58,14 @@ describe('additional TinyPNG coverage', () => {
     expect(new TinyPNG({ key, log: true }).utils.log('visible')).toBeDefined();
   });
 
+  it('validates an API key with promises and callbacks', async () => {
+    nock('https://api.tinify.com').post('/shrink').reply(200);
+    await TinyPNG.validate(key);
+
+    nock('https://api.tinify.com').post('/shrink').reply(200);
+    await new Promise((resolve, reject) => TinyPNG.validate(key, (error) => error ? reject(error) : resolve()));
+  });
+
   it.each(['webp', 'avif'])('compresses %s files through the official Tinify client', async (format) => {
     mockSuccessfulApi();
     const instance = new TinyPNG({ key, retryAttempts: 1 });
