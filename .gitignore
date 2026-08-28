@@ -3,6 +3,7 @@
 node_modules/
 .npm-cache/
 coverage/
+dist/
 test/assets/tmp
 .vscode
 .zed

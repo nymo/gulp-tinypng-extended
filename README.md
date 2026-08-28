@@ -337,13 +337,21 @@ Most documented Gulp options remain available. The following behavior is intenti
 
 ## Development
 
+The TypeScript source is located in `src/`. The compiled CommonJS JavaScript and declaration files are generated in `dist/`; this directory is created during builds and npm packaging.
+
 Install dependencies:
 
 ```sh
 npm install
 ```
 
-Run tests:
+Build the TypeScript source:
+
+```sh
+npm run build
+```
+
+Run tests. The test command builds the project first:
 
 ```sh
 npm test
@@ -359,6 +367,12 @@ Run the linter:
 
 ```sh
 npm run lint
+```
+
+Check the files that will be published:
+
+```sh
+npm pack --dry-run
 ```
 
 The repository also contains a small end-to-end demo project in [`../gulp-tinypng-extended-demo`](../gulp-tinypng-extended-demo). A live demo run requires a real API key and consumes Tinify quota.

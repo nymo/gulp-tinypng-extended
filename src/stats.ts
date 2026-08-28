@@ -1,3 +1,5 @@
+export {};
+
 function createStats() {
     return {
         total: {

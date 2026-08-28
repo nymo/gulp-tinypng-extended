@@ -1,3 +1,5 @@
+export {};
+
 var minimatch = require('minimatch');
 
 function createUtils(options) {

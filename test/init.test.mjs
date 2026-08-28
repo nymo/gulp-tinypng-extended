@@ -264,7 +264,7 @@ describe('tinypng', function() {
 			it('doesn\'t error on failed JSON parse', function() {
 				var hash = new inst.hasher('/etc/hosts');
 
-				expect(hash.populate).to.not.throw(Error);
+				expect(function() { hash.populate(); }).to.not.throw(Error);
 				expect(hash.populate()).to.not.be.instanceof(Error);
 			});
 		});
