@@ -166,6 +166,10 @@ function TinyPNG(opt: any, obj?: any): any {
                         (stats.total.in ? Math.round(stats.total.out / stats.total.in * 10000) / 10000 : 0)
                     );
 
+                if(typeof stats.compressionCount === 'number') {
+                    info += util.format(', Monthly compressions: %s', stats.compressionCount);
+                }
+
                 self.utils.log(info, true);
 
                 if(stats.retries > 0) {
@@ -201,6 +205,9 @@ function TinyPNG(opt: any, obj?: any): any {
 
                     source.toBuffer().then(function(data) {
                         compressed = Buffer.from(data);
+                        if(typeof tinify.compressionCount === 'number') {
+                            self.stats.compressionCount = tinify.compressionCount;
+                        }
                         cb(null, {
                             url: true,
                             count: tinify.compressionCount || 0

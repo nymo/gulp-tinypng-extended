@@ -12,6 +12,10 @@ Changes committed after `v3.0.1`:
 - Added ESLint and refreshed project metadata and tooling.
 - Added pull-request test pipeline configuration and updated project documentation.
 - Recorded `3.0.2` and `3.0.3` release commits; these versions do not have corresponding tags in the repository.
+- Added the official Tinify client for API communication and removed the deprecated request stack.
+- Migrated the implementation to TypeScript with compiled CommonJS output and declarations.
+- Added explicit AVIF and WebP input support in the example and demo pipelines.
+- Added Tinify's monthly compression count to summarized output.
 
 ## [v3.0.1] - 2020-10-05
 
