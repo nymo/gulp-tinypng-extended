@@ -3,6 +3,14 @@
   "version": "3.0.3",
   "description": "TinyPNG API wrapper for compressing PNG & JPG images",
   "main": "index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "index.js",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/nymo/gulp-tinypng-extended.git"
@@ -12,9 +20,13 @@
   },
   "homepage": "https://github.com/nymo/gulp-tinypng-extended#readme",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "lint": "eslint .",
     "test": "vitest run",
-    "coverage": "vitest run --coverage --coverage.include=index.js --coverage.exclude=test/** --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=json-summary"
+    "pretest": "npm run build",
+    "coverage": "vitest run --coverage --coverage.include=dist/**/*.js --coverage.exclude=test/** --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=json-summary",
+    "precoverage": "npm run build"
   },
   "author": {
     "name": "Gregor Panek",
@@ -52,11 +64,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.9.1",
     "globals": "^17.11.0",
     "gulp": "^5.0.1",
     "nock": "^13.5.6",
-    "vitest": "^4.1.11"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
   }
 }
