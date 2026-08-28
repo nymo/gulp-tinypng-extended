@@ -2,21 +2,39 @@
 
 All notable changes to `gulp-tinypng-extended` are documented here.
 
-## [Unreleased]
+## [v4.0.0]
 
-Changes committed after `v3.0.1`:
+Version 4.0.0 modernizes the plugin around the official Tinify API client while preserving the existing Gulp/Vinyl stream integration and documented options wherever possible.
+
+### Breaking changes and compatibility notes
+
+- Requires Node.js `14` or newer; older Node.js versions are no longer supported.
+- Replaced the deprecated `request` and `requestretry` dependencies with `tinify@1.8.3`.
+- Removed the custom upload/download HTTP implementation and the insecure `strictSSL: false` behavior.
+- Compression now uses the official client’s single buffer-based operation rather than separate upload and download HTTP stages.
+- Tinify error classes and messages are now the source of API error details, and temporary server or connection failures are retried through the official client.
+- The official API upload response must provide its `Location` header; tests and custom API mocks must model this response correctly.
+- Direct use of undocumented internal `request.upload()` and `request.download()` methods is no longer supported. Use the Gulp plugin stream API instead.
+
+### Features and improvements
+
+- Migrated the implementation to TypeScript with compiled CommonJS output and TypeScript declarations.
+- Added explicit PNG, JPEG, WebP, AVIF, and other supported image input handling when those extensions are included in the source glob.
+- Added JPEG GPS location metadata preservation through `keepMetadata`, alongside copyright and creation metadata.
+- Added account-wide monthly Tinify compression count reporting to summarized output.
+- Added opt-in API-key validation through `tinypng.validate()`, with both promise and callback APIs for CI and deployment preflight checks.
+- Preserved signature caching, including `sameDest` handling, to avoid recompressing unchanged files.
+- Preserved parallel processing, logging, summaries, retry configuration, `keepOriginal`, metadata options, and safe handling of failed files.
+- Updated the example and demo pipelines for modern image formats and the official client flow.
+
+### Security and maintenance
 
 - Updated vulnerable dependencies, including `ini`, `brace-expansion`, `lodash`, `minimist`, `mkdirp`, `json-schema`, `jsprim`, `y18n`, and `path-parse`.
+- Updated `minimatch` to a maintained 5.x release to resolve the production ReDoS advisory.
 - Added CodeQL analysis configuration.
 - Migrated the test suite from Mocha/Chai to Vitest.
-- Added ESLint and refreshed project metadata and tooling.
-- Added pull-request test pipeline configuration and updated project documentation.
+- Added ESLint, TypeScript ESLint support, refreshed project metadata and tooling, and added pull-request test pipeline configuration.
 - Recorded `3.0.2` and `3.0.3` release commits; these versions do not have corresponding tags in the repository.
-- Added the official Tinify client for API communication and removed the deprecated request stack.
-- Migrated the implementation to TypeScript with compiled CommonJS output and declarations.
-- Added explicit AVIF and WebP input support in the example and demo pipelines.
-- Added Tinify's monthly compression count to summarized output.
-- Added explicit promise and callback APIs for Tinify API-key validation.
 
 ## [v3.0.1] - 2020-10-05
 
@@ -135,7 +153,7 @@ Changes committed after `v3.0.1`:
 
 - Published version 1.1.1.
 
-[Unreleased]: https://github.com/nymo/gulp-tinypng-extended/compare/v3.0.1...HEAD
+[v4.0.0]: https://github.com/nymo/gulp-tinypng-extended/releases/tag/v4.0.0
 [v3.0.1]: https://github.com/nymo/gulp-tinypng-extended/releases/tag/v3.0.1
 [v3.0.0]: https://github.com/nymo/gulp-tinypng-extended/releases/tag/v3.0.0
 [v2.0.2]: https://github.com/nymo/gulp-tinypng-extended/releases/tag/v2.0.2
