@@ -1,60 +1,79 @@
-export {};
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 
-var fs = require('fs'),
-    crypto = require('crypto');
+export interface SignatureFile {
+    sigFile: string | false;
+    sigs: Record<string, string>;
+    changed?: boolean;
+    calc(file: SignatureInput, callback?: (hash: string) => void): string | SignatureFile;
+    update(file: SignatureInput, hash: string): SignatureFile;
+    compare(file: SignatureInput, callback?: (match: boolean, hash: string) => void): SignatureComparison | SignatureFile;
+    populate(): SignatureFile;
+    write(): SignatureFile;
+}
 
-function SignatureStore(sigFile) {
+export interface SignatureInput {
+    contents: Buffer;
+    path: string;
+    cwd: string;
+}
+
+export interface SignatureComparison {
+    match: boolean;
+    hash: string;
+}
+
+export default function createSignatureStore(sigFile?: string | false): SignatureFile {
     return {
         sigFile: sigFile || false,
         sigs: {},
 
-        calc: function(file, cb) {
-            var md5 = crypto.createHash('md5').update(file.contents).digest('hex');
+        calc(file, callback) {
+            const md5 = crypto.createHash('md5').update(file.contents).digest('hex');
 
-            cb && cb(md5);
+            if (callback) callback(md5);
 
-            return cb ? this : md5;
+            return callback ? this : md5;
         },
 
-        update: function(file, hash) {
+        update(file, hash) {
             this.changed = true;
             this.sigs[file.path.replace(file.cwd, '')] = hash;
 
             return this;
         },
 
-        compare: function(file, cb) {
-            var md5 = this.calc(file),
-                filepath = file.path.replace(file.cwd, ''),
-                result = (filepath in this.sigs && md5 === this.sigs[filepath]);
+        compare(file, callback) {
+            const md5 = this.calc(file) as string;
+            const filepath = file.path.replace(file.cwd, '');
+            const result = filepath in this.sigs && md5 === this.sigs[filepath];
 
-            cb && cb(result, md5);
+            if (callback) callback(result, md5);
 
-            return cb ? this : { match: result, hash: md5 };
+            return callback ? this : { match: result, hash: md5 };
         },
 
-        populate: function() {
-            var data: any = false;
+        populate() {
+            let data: unknown = false;
 
-            if(this.sigFile) {
+            if (this.sigFile) {
                 try {
-                    data = fs.readFileSync(this.sigFile, 'utf-8');
-                    if(data) data = JSON.parse(data);
-                } catch(err) {
+                    data = JSON.parse(fs.readFileSync(this.sigFile, 'utf-8'));
+                } catch {
                     // A missing or malformed cache should not stop image processing.
                 }
 
-                if(data) this.sigs = data;
+                if (data && typeof data === 'object') this.sigs = data as Record<string, string>;
             }
 
             return this;
         },
 
-        write: function() {
-            if(this.changed) {
+        write() {
+            if (this.changed) {
                 try {
-                    fs.writeFileSync(this.sigFile, JSON.stringify(this.sigs));
-                } catch(err) {
+                    fs.writeFileSync(this.sigFile as string, JSON.stringify(this.sigs));
+                } catch {
                     // A cache write failure should not discard compressed output.
                 }
             }
@@ -63,5 +82,3 @@ function SignatureStore(sigFile) {
         }
     };
 }
-
-module.exports = SignatureStore;
