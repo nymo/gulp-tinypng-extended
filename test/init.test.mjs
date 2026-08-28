@@ -40,7 +40,7 @@ var fs = require('fs'),
 	TinyPNG = require('../index'),
 	mockTinyPngApi = require('./mock-api');
 
-var key = 'KHOsJMrP6w-X3FVuyXdevV-vCnDDbqo9',
+var key = 'test-api-key',
 	cwd = fileURLToPath(new URL('.', import.meta.url)), 
 	TestFile = function(type) {
 		var file = cwd + '/assets/image' + (type ? '_' + type : '') + '.png';
