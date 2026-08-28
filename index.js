@@ -6,13 +6,17 @@ var test = process.env.NODE_ENV == 'test',
     path = require('path'),
     util = require('util'),
     fs = require('fs'),
-    crypto = require('crypto'),
-    minimatch = require('minimatch'),
     PluginError = require('plugin-error'),
     parseArgs = require('minimist')(process.argv.slice(2)),
-    log = require('fancy-log');
+    log = require('fancy-log'),
+    optionsModule = require('./lib/options'),
+    createStats = require('./lib/stats'),
+    SignatureStore = require('./lib/signature-store'),
+    createUtils = require('./lib/utils');
 
-var PLUGIN_NAME = 'gulp-tinypng-extended';
+var PLUGIN_NAME = 'gulp-tinypng-extended',
+    DEFAULT_OPTIONS = optionsModule.DEFAULT_OPTIONS,
+    normalizeOptions = optionsModule.normalizeOptions;
 
 /**
  * TinyPNG class
@@ -24,44 +28,15 @@ function TinyPNG(opt, obj) {
 
     this.conf = {
         token: null,
-        options: {
-            key: '',
-            sigFile: false,
-            log: false,
-            force: false,
-            ignore: false,
-            sameDest: false,
-            summarize: false,
-            parallel: true,
-            parallelMax: 5,
-            keepOriginal: true,
-            keepMetadata: false,
-            retryAttempts: 10,
-            retryDelay: 10000
-        }
+        options: Object.assign({}, DEFAULT_OPTIONS)
     };
 
-    this.stats = {
-        total: {
-            in: 0,
-            out: 0
-        },
-        compressed: 0,
-        skipped: 0,
-        retries: 0,
-        retried: []
-    };
+    this.stats = createStats();
 
     this.init = function(opt) {
-        if(typeof opt !== 'object') opt = { key: opt };
-
-        opt = Object.assign({}, this.conf.options, opt);
+        opt = normalizeOptions(opt, parseArgs);
 
         if(!opt.key) throw new PluginError(PLUGIN_NAME, 'Missing API key!');
-
-        if(!opt.force) opt.force = parseArgs.force || false; // force match glob
-        if(!opt.ignore) opt.ignore = parseArgs.ignore || false; // ignore match glob
-        if(opt.summarise) opt.summarize = true; // chin chin, old chap!
 
         this.conf.options = opt; // export opts
 
@@ -238,104 +213,16 @@ function TinyPNG(opt, obj) {
         };
     };
 
-    this.hasher = function(sigFile) {
-        return {
-            sigFile: sigFile || false,
-            sigs: {},
+    this.hasher = SignatureStore;
 
-            calc: function(file, cb) {
-                var md5 = crypto.createHash('md5').update(file.contents).digest('hex');
-
-                cb && cb(md5);
-
-                return cb ? this : md5;
-            },
-            update: function(file, hash) {
-                this.changed = true;
-                this.sigs[file.path.replace(file.cwd, '')] = hash;
-
-                return this;
-            },
-            compare: function(file, cb) {
-
-                var md5 = this.calc(file),
-                    filepath = file.path.replace(file.cwd, ''),
-                    result = (filepath in this.sigs && md5 === this.sigs[filepath]);
-
-                cb && cb(result, md5);
-
-                return cb ? this : { match: result, hash: md5 };
-            },
-            populate: function() {
-                var data = false;
-
-                if(this.sigFile) {
-                    try {
-                        data = fs.readFileSync(this.sigFile, 'utf-8');
-                        if(data) data = JSON.parse(data);
-                    } catch(err) {
-                        // meh
-                    }
-
-                    if(data) this.sigs = data;
-                }
-
-                return this;
-            },
-            write: function() {
-                if(this.changed) {
-                    try {
-                        fs.writeFileSync(this.sigFile, JSON.stringify(this.sigs));
-                    } catch(err) {
-                        // meh
-                    }
-                }
-
-                return this;
-            }
-        };
-    };
-
-    this.utils = {
-        log: function(message, force) {
-            if(self.conf.options.log || force) log(PLUGIN_NAME, message);
-
-            return this;
+    this.utils = createUtils({
+        getOptions: function() {
+            return self.conf.options;
         },
-
-        apiError: function(err, file) {
-            var message = err && err.message || 'Unknown TinyPNG API error',
-                name = err && err.name || 'Error';
-
-            return new PluginError(PLUGIN_NAME, name + ' for ' + file.relative + ': ' + message, {
-                cause: err
-            });
-        },
-
-        glob: function(file, glob, opt) {
-            opt = opt || {};
-            var result = false;
-
-            if(typeof glob === 'boolean') return glob;
-
-            try {
-                result = minimatch(file.path, glob, opt);
-            } catch(err) {}
-
-            if(!result && !opt.matchBase) {
-                opt.matchBase = true;
-                return this.glob(file, glob, opt);
-            }
-            return result;
-        },
-
-        prettySize: function(bytes) {
-            if(bytes === 0) return '0.00 B';
-
-            var pos = Math.floor(Math.log(bytes) / Math.log(1024));
-            return (bytes / Math.pow(1024, pos)).toFixed(2) + ' ' + ' KMGTP'.charAt(pos) + 'B';
-        }
-    };
+        logger: log,
+        PluginError: PluginError,
+        pluginName: PLUGIN_NAME
+    });
 
     return (obj || test) ? this.init(opt) : this.init(opt).stream();
 }

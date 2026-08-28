@@ -6,10 +6,15 @@
 
 ## Repository layout
 
-- `index.js` — plugin implementation, request handling, retries, hashing/signature support, and stream behavior.
+- `index.js` — CommonJS compatibility entry point, Tinify client integration, and Vinyl stream behavior.
+- `lib/options.js` — option defaults and CLI option normalization.
+- `lib/stats.js` — compression statistics factory.
+- `lib/signature-store.js` — source signature calculation, comparison, loading, and persistence.
+- `lib/utils.js` — Gulp-oriented logging, glob matching, API error wrapping, and size formatting.
 - `gulpfile.js` — local Gulp task for manually exercising image compression.
-- `test/init.js` — Mocha/Chai test suite.
-- `test/mock-api.js` — Nock fixtures for the TinyPNG API.
+- `test/init.test.mjs` — primary behavior and integration-style test suite.
+- `test/coverage.test.mjs` — additional branch and edge-case coverage.
+- `test/mock-api.js` — Nock fixtures for the official Tinify API flow.
 - `test/assets/` — image and download fixtures used by tests.
 - `package.json` — package metadata and npm scripts.
 - `README.md` — public API and usage documentation.
@@ -17,6 +22,7 @@
 ## Development conventions
 
 - Preserve the existing JavaScript style unless a change requires otherwise: CommonJS modules, `var`, callbacks, and the existing indentation/formatting patterns.
+- Keep the official Tinify API interaction in `index.js` until the TypeScript adapter migration; keep plugin-specific utilities in `lib/`.
 - Keep changes focused on the requested behavior. Avoid broad refactors or dependency upgrades unless explicitly needed.
 - Preserve the plugin’s stream semantics and callback behavior. Be especially careful with error events, retries, concurrent uploads, skipped files, and signature-file updates.
 - TinyPNG requests should be mocked in automated tests; tests must not depend on a live API or consume API quota.
