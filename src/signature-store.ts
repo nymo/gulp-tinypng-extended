@@ -1,3 +1,5 @@
+export {};
+
 var fs = require('fs'),
     crypto = require('crypto');
 
@@ -32,7 +34,7 @@ function SignatureStore(sigFile) {
         },
 
         populate: function() {
-            var data = false;
+            var data: any = false;
 
             if(this.sigFile) {
                 try {

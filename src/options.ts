@@ -1,3 +1,5 @@
+export {};
+
 var DEFAULT_OPTIONS = {
     key: '',
     sigFile: false,
