@@ -66,6 +66,7 @@ This makes API usage visible in local builds and CI logs without requiring a sep
 - Node.js `14` or newer
 - Gulp 4 or a compatible current Gulp release
 - A [Tinify API key](https://tinypng.com/developers)
+- An image source that preserves binary file contents (use `encoding: false` with `gulp.src()`)
 
 Tinify uploads image data to its API for processing. Do not use this plugin for images that must not leave your build environment.
 
@@ -104,7 +105,11 @@ function compressImages() {
     throw new Error('Set TINYPNG_KEY before running the compress task.');
   }
 
-  return gulp.src(paths.images, { base: path.join(__dirname, 'src/images') })
+  return gulp.src(paths.images, {
+    base: path.join(__dirname, 'src/images'),
+    // Images must remain binary Buffers; do not decode them as UTF-8.
+    encoding: false
+  })
     .pipe(plumber())
     .pipe(tinypng({
       key: process.env.TINYPNG_KEY,
@@ -387,6 +392,7 @@ Most documented Gulp options remain available in `4.0.0`. The following changes 
 - The official API requires the upload response `Location` header; tests and custom API mocks must model the official response correctly.
 - Direct use of undocumented internal `request.upload()` and `request.download()` methods is no longer supported. Use the Gulp plugin stream API instead.
 - Node.js versions older than `14` are no longer supported.
+- Input files must reach the plugin as binary Buffers. When using `gulp.src()`, set `encoding: false`; decoding PNG/JPEG/WebP/AVIF data as UTF-8 corrupts the image and can result in HTTP 415 errors.
 
 ## Migrating from 3.0.3 to 4.0.0
 

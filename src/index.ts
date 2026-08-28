@@ -3,6 +3,7 @@ import throughParallel from 'through2-concurrent';
 import chalk from 'ansi-colors';
 import tinify from 'tinify';
 import util from 'node:util';
+
 import fs from 'node:fs';
 import PluginError from 'plugin-error';
 import minimist from 'minimist';
@@ -178,14 +179,12 @@ function TinyPNG(opt: unknown, obj?: boolean): unknown {
 
             upload: function(cb) {
                 const file = this.file;
-                let source;
-
                 if(!file || !file.contents || file.contents.length === 0) {
                     return cb(new Error('Error: Empty or broken images could not be send ' + (file && file.relative || '')));
                 }
 
                 try {
-                    source = tinify.fromBuffer(file.contents);
+                    let source = tinify.fromBuffer(file.contents);
                     if(getRequest().conf.options.keepMetadata) {
                         source = source.preserve('copyright', 'creation', 'location');
                     }
