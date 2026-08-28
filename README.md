@@ -20,7 +20,7 @@
 - Preserves selected metadata when required.
 - Handles API errors without stopping the entire image pipeline when used with `gulp-plumber`.
 - Includes retry support for temporary Tinify/API and network failures.
-- Works with PNG and JPEG files and can process other formats supported by the Tinify API when they are included in the source glob.
+- Supports PNG, JPEG, WebP, and AVIF input when those extensions are included in the source glob.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ const plumber = require('gulp-plumber');
 const tinypng = require('gulp-tinypng-extended');
 
 const paths = {
-  images: path.join(__dirname, 'src/images/**/*.{png,jpg,jpeg}'),
+  images: path.join(__dirname, 'src/images/**/*.{png,jpg,jpeg,webp,avif}'),
   destination: path.join(__dirname, 'dist/images'),
   signatures: path.join(__dirname, '.tinypng-sigs')
 };
@@ -85,7 +85,7 @@ Run the task:
 npx gulp images
 ```
 
-The first run uploads each image. Later runs skip images whose source content has not changed when `sigFile` is enabled.
+The first run uploads each image. Later runs skip images whose source content has not changed when `sigFile` is enabled. The plugin preserves each file's original path and extension; it does not convert or resize images.
 
 ## Features
 

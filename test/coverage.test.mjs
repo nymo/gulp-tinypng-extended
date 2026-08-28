@@ -58,6 +58,16 @@ describe('additional TinyPNG coverage', () => {
     expect(new TinyPNG({ key, log: true }).utils.log('visible')).toBeDefined();
   });
 
+  it.each(['webp', 'avif'])('compresses %s files through the official Tinify client', async (format) => {
+    mockSuccessfulApi();
+    const instance = new TinyPNG({ key, retryAttempts: 1 });
+    const result = await runStream(instance, file(image, `image.${format}`));
+
+    expect(result).toHaveLength(1);
+    expect(result[0].relative).toBe(`image.${format}`);
+    expect(result[0].contents).toEqual(fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
+  });
+
   it('handles successful upload metadata preservation', async () => {
     mockSuccessfulApi();
     nock('https://api.tinify.com')

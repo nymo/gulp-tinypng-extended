@@ -7,10 +7,10 @@ var gulp = require('gulp'),
     sigs = process.env.TINYPNG_SIGS ? true : false;
 
 gulp.task('tinypng', function() {
-    return gulp.src(cwd + '/test/assets/image.png')
+    return gulp.src(cwd + '/test/assets/**/*.{png,jpg,jpeg,webp,avif}')
         .pipe(plumber())
         .pipe(tinypng({
-            key: process.env.TINYPNG_KEY || 'KHOsJMrP6w-X3FVuyXdevV-vCnDDbqo9',
+            key: process.env.TINYPNG_KEY,
             log: true,
             sigFile: (sigs ? '.sigs' : false)
         }).on('error', function(err) {
