@@ -66,6 +66,7 @@ describe('additional TinyPNG coverage', () => {
     expect(result).toHaveLength(1);
     expect(result[0].relative).toBe(`image.${format}`);
     expect(result[0].contents).toEqual(fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
+    expect(instance.stats.compressionCount).toBe(1);
   });
 
   it('handles successful upload metadata preservation', async () => {
