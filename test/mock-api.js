@@ -10,6 +10,9 @@ module.exports = function mockTinyPngApi() {
             output: {
                 url: 'https://api.tinify.com/output'
             }
+        }, {
+            location: 'https://api.tinify.com/output',
+            'compression-count': '1'
         });
 
     nock('https://api.tinify.com')

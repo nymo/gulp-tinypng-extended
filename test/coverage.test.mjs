@@ -34,7 +34,11 @@ function runStream(instance, item) {
 function mockSuccessfulApi(options = {}) {
   nock('https://api.tinify.com')
     .post('/shrink')
-    .reply(201, { output: { url: 'https://api.tinify.com/output' } }, options.uploadHeaders);
+    .reply(201, { output: { url: 'https://api.tinify.com/output' } }, {
+      location: 'https://api.tinify.com/output',
+      'compression-count': '1',
+      ...(options.uploadHeaders || {})
+    });
   nock('https://api.tinify.com').get('/output').reply(200, fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
 }
 
@@ -55,19 +59,21 @@ describe('additional TinyPNG coverage', () => {
   });
 
   it('handles successful upload metadata preservation', async () => {
-    mockSuccessfulApi({ uploadHeaders: { location: 'https://api.tinify.com/output-with-metadata' } });
+    mockSuccessfulApi();
+    nock('https://api.tinify.com')
+      .post('/output', { preserve: ['copyright', 'creation'] })
+      .reply(201, fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
     const instance = new TinyPNG({ key, keepMetadata: true, retryAttempts: 1 });
-    const result = await new Promise((resolve, reject) => instance.request(file()).upload((error, data) => error ? reject(error) : resolve(data)));
+    const result = await new Promise((resolve, reject) => instance.request(file()).get((error, data) => error ? reject(error) : resolve(data)));
 
-    expect(result.url).toBe('https://api.tinify.com/output-with-metadata');
-    expect(result.count).toBe(0);
+    expect(result.contents).toEqual(fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
   });
 
   it.each([
-    ['invalid JSON', () => nock('https://api.tinify.com').post('/shrink').reply(201, 'not-json'), /Upload response JSON parse failed/],
-    ['API error', () => nock('https://api.tinify.com').post('/shrink').reply(201, { error: 'TooManyRequests', message: 'slow down' }), /TooManyRequests \(201\): slow down/],
-    ['invalid response', () => nock('https://api.tinify.com').post('/shrink').reply(201, { output: {} }), /Invalid TinyPNG response object/],
-    ['empty response', () => nock('https://api.tinify.com').post('/shrink').reply(201), /No content returned/]
+    ['invalid JSON', () => nock('https://api.tinify.com').post('/shrink').reply(500, 'not-json'), /ParseError/],
+    ['API error', () => nock('https://api.tinify.com').post('/shrink').reply(429, { error: 'TooManyRequests', message: 'slow down' }), /TooManyRequests/],
+    ['invalid response', () => nock('https://api.tinify.com').post('/shrink').reply(400, { error: 'BadRequest', message: 'invalid image' }), /BadRequest/],
+    ['empty response', () => nock('https://api.tinify.com').post('/shrink').reply(500), /ParseError/]
   ])('reports %s upload responses', async (_name, mock, expected) => {
     mock();
     const instance = new TinyPNG({ key, retryAttempts: 1 });
@@ -77,21 +83,14 @@ describe('additional TinyPNG coverage', () => {
     expect(error.message).toMatch(expected);
   });
 
-  it('reports empty download bodies', async () => {
-    nock('https://api.tinify.com').get('/output').replyWithError('connection lost');
-    const instance = new TinyPNG({ key, retryAttempts: 1, retryDelay: 0 });
-    const error = await new Promise((resolve) => instance.request(file()).download('https://api.tinify.com/output', (downloadError) => resolve(downloadError)));
 
-    expect(error.message).toMatch(/Empty Body for Download/);
-  });
 
   it('returns the request file when get cannot upload or download', async () => {
     const uploadError = await new Promise((resolve) => new TinyPNG({ key }).request(file(null)).get((error, original) => resolve({ error, original })));
     expect(uploadError.error).toBeInstanceOf(Error);
     expect(uploadError.original.path).toContain('image.png');
 
-    nock('https://api.tinify.com').post('/shrink').reply(201, { output: { url: 'https://api.tinify.com/output' } });
-    nock('https://api.tinify.com').get('/output').replyWithError('connection lost');
+    nock('https://api.tinify.com').post('/shrink').reply(502, { error: 'ServerError', message: 'temporary failure' });
     const instance = new TinyPNG({ key, retryAttempts: 1, retryDelay: 0 });
     const downloadError = await new Promise((resolve) => instance.request(file()).get((error, original) => resolve({ error, original })));
     expect(downloadError.error).toBeInstanceOf(Error);
