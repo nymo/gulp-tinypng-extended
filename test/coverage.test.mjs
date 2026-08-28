@@ -72,7 +72,7 @@ describe('additional TinyPNG coverage', () => {
   it('handles successful upload metadata preservation', async () => {
     mockSuccessfulApi();
     nock('https://api.tinify.com')
-      .post('/output', { preserve: ['copyright', 'creation'] })
+      .post('/output', { preserve: ['copyright', 'creation', 'location'] })
       .reply(201, fs.readFileSync(new URL('./assets/image_small.png', import.meta.url)));
     const instance = new TinyPNG({ key, keepMetadata: true, retryAttempts: 1 });
     const result = await new Promise((resolve, reject) => instance.request(file()).get((error, data) => error ? reject(error) : resolve(data)));

@@ -17,7 +17,7 @@
 - Avoids recompressing unchanged files with an optional signature file.
 - Supports concurrent processing for faster builds.
 - Can write compressed files to the Gulp destination or overwrite the originals.
-- Preserves selected metadata when required.
+- Preserves copyright, creation, and JPEG GPS metadata when requested.
 - Handles API errors without stopping the entire image pipeline when used with `gulp-plumber`.
 - Includes retry support for temporary Tinify/API and network failures.
 - Supports PNG, JPEG, WebP, and AVIF input when those extensions are included in the source glob.
@@ -36,6 +36,19 @@ gulp.src('src/images/**/*.{png,jpg,jpeg,webp,avif}')
 ```
 
 WebP and AVIF files are sent to the official Tinify API as buffers and returned through the normal Vinyl stream. Existing paths and extensions are preserved, so adding modern formats does not require a separate pipeline.
+
+### GPS metadata preservation
+
+Set `keepMetadata: true` to preserve the metadata supported by Tinify, including copyright information, creation date, and GPS location data for JPEG images:
+
+```js
+tinypng({
+  key: process.env.TINYPNG_KEY,
+  keepMetadata: true
+})
+```
+
+GPS location metadata is supported for JPEG files. Metadata preservation can increase the output size and should only be enabled when the information is required.
 
 ### Built-in API usage visibility
 
@@ -177,7 +190,7 @@ tinypng({
 
 ### Preserve metadata
 
-Tinify removes most metadata by default to achieve smaller files. Preserve copyright and creation metadata with:
+Tinify removes most metadata by default to achieve smaller files. Preserve copyright, creation, and JPEG GPS location metadata with:
 
 ```js
 tinypng({
@@ -186,7 +199,7 @@ tinypng({
 })
 ```
 
-Preserving metadata can increase the output size. The official Tinify client also supports location metadata; this plugin currently preserves the existing project behavior of requesting copyright and creation metadata.
+Preserving metadata can increase the output size. GPS location metadata is supported for JPEG images; it is not added to formats where Tinify does not support location metadata.
 
 ### Write to a destination or overwrite the source
 
@@ -281,7 +294,7 @@ tinypng(process.env.TINYPNG_KEY);
 | `sigFile` | `string \| false` | `false` | File used to store source signatures. |
 | `sameDest` | `boolean` | `false` | Use when source and destination are the same path. |
 | `keepOriginal` | `boolean` | `true` | Push the compressed file into the stream. Set to `false` to overwrite the source. |
-| `keepMetadata` | `boolean` | `false` | Preserve copyright and creation metadata. |
+| `keepMetadata` | `boolean` | `false` | Preserve copyright, creation, and JPEG GPS location metadata. |
 | `force` | `boolean \| string` | `false` | Process all files or files matching a glob regardless of signatures. |
 | `ignore` | `boolean \| string` | `false` | Skip all files or files matching a glob. |
 | `parallel` | `boolean` | `true` | Process files concurrently. |
