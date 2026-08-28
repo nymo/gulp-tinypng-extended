@@ -22,6 +22,7 @@
 - Includes retry support for temporary Tinify/API and network failures.
 - Supports PNG, JPEG, WebP, and AVIF input when those extensions are included in the source glob.
 - Reports Tinify's current monthly compression count in build summaries, helping teams monitor API usage and quota.
+- Provides an explicit API-key validation method for CI and preflight checks.
 
 ## Standout features
 
@@ -333,6 +334,28 @@ export TINYPNG_KEY=your_api_key
 or loading the key from your CI secret store.
 
 The plugin uses the official Tinify client and HTTPS certificate verification. Images are uploaded to the Tinify API, so review Tinify's terms and your project's data-handling requirements before using the plugin in production.
+
+## Validate an API key
+
+Use `tinypng.validate()` to perform an explicit Tinify API-key and connectivity check before starting a build. It supports both promises and callbacks:
+
+```js
+const tinypng = require('gulp-tinypng-extended');
+
+await tinypng.validate(process.env.TINYPNG_KEY);
+console.log('Tinify API key is valid.');
+```
+
+Callback form:
+
+```js
+tinypng.validate(process.env.TINYPNG_KEY, function(error) {
+  if (error) throw error;
+  console.log('Tinify API key is valid.');
+});
+```
+
+Validation is opt-in and makes an API request. It is useful in CI or deployment preflight checks, but it is not run automatically for every Gulp task.
 
 ## Major update: official Tinify API client
 
