@@ -200,7 +200,7 @@ function TinyPNG(opt: any, obj?: any): any {
                 try {
                     source = tinify.fromBuffer(file.contents);
                     if(self.conf.options.keepMetadata) {
-                        source = source.preserve('copyright', 'creation');
+                        source = source.preserve('copyright', 'creation', 'location');
                     }
 
                     source.toBuffer().then(function(data) {
