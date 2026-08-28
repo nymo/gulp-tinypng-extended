@@ -357,44 +357,139 @@ tinypng.validate(process.env.TINYPNG_KEY, function(error) {
 
 Validation is opt-in and makes an API request. It is useful in CI or deployment preflight checks, but it is not run automatically for every Gulp task.
 
-## Major update: official Tinify API client
+## Version 4.0.0: official Tinify API client
 
-The current development line replaces the former custom HTTP implementation with the official [`tinify`](https://www.npmjs.com/package/tinify) Node.js client.
+`4.0.0` is the modernized release of `gulp-tinypng-extended`. It replaces the former custom HTTP implementation with the official [`tinify`](https://www.npmjs.com/package/tinify) Node.js client and establishes a maintained TypeScript-based foundation for the plugin.
 
-### What changed
+### What changed in 4.0.0
 
-- Removed the deprecated `request` and `requestretry` dependencies.
-- Added `tinify@1.8.3` as the API client.
-- Removed the custom upload/download HTTP code.
+- Replaced the deprecated `request` and `requestretry` dependencies with `tinify@1.8.3`.
+- Removed the custom TinyPNG upload/download HTTP implementation.
 - Removed the insecure `strictSSL: false` behavior.
 - Uses the official Tinify API error classes and retry implementation.
 - Uses the official API response `Location` header and buffer-based compression flow.
-- Preserves the Gulp/Vinyl stream layer, signature caching, logging, summaries, and project-specific options.
-- Updated the test mocks to model real Tinify API responses.
-- Updated Nock for compatibility with current Node.js versions.
-- Updated `minimatch` to a maintained 5.x release, resolving the production ReDoS advisory.
-- Raised the minimum Node.js version from 10 to 14 because the current Tinify client requires Node.js 14 or newer.
+- Added TypeScript source, compiled CommonJS output, and TypeScript declarations.
+- Added explicit support for PNG, JPEG, WebP, and AVIF input files.
+- Added JPEG GPS location metadata preservation through `keepMetadata`.
+- Added account-wide monthly compression count reporting to summarized output.
+- Added opt-in API-key validation through `tinypng.validate()`.
+- Preserved the Gulp/Vinyl stream layer, signature caching, logging, summaries, retries, and project-specific options.
+- Updated `minimatch` to a maintained 5.x release to resolve the production ReDoS advisory.
+- Updated the test suite and demo application for the official client flow.
+- Updated the minimum supported Node.js version to `14`.
 
 ### Compatibility notes
 
-This is a major internal transport change and is intended for the `4.0.0` release.
-
-Most documented Gulp options remain available. The following behavior is intentionally different from the old implementation:
+Most documented Gulp options remain available in `4.0.0`. The following changes are intentional:
 
 - The official client performs compression as a single buffer-based operation rather than exposing separate upload and download HTTP stages.
-- Official Tinify error types and messages are now used as the source of API error details.
-- The official API requires the upload response `Location` header; custom mocks and integrations must model that response correctly.
-- Direct use of undocumented internal `request.upload()` and `request.download()` methods should not be relied upon. Use the Gulp plugin stream API instead.
-- Node.js versions older than 14 are no longer supported.
+- Tinify error types and messages are now used as the source of API error details.
+- The official API requires the upload response `Location` header; tests and custom API mocks must model the official response correctly.
+- Direct use of undocumented internal `request.upload()` and `request.download()` methods is no longer supported. Use the Gulp plugin stream API instead.
+- Node.js versions older than `14` are no longer supported.
 
-### Migration checklist
+## Migrating from 3.0.3 to 4.0.0
 
-1. Upgrade Node.js to version 14 or newer.
-2. Replace any direct dependency on the old `request` or `requestretry` behavior in integrations.
-3. Continue passing the API key through `key` or `TINYPNG_KEY`.
-4. Keep using `sigFile`, `keepMetadata`, `keepOriginal`, `force`, `ignore`, and the other documented plugin options.
-5. Update tests to mock the official Tinify API flow, including the `Location` response header.
-6. Do not depend on the plugin's internal object structure; it is not part of the public API.
+### 1. Upgrade Node.js
+
+Version `4.0.0` requires Node.js `14` or newer:
+
+```sh
+node --version
+```
+
+Upgrade Node.js before installing the new release if the command reports a version below `14`.
+
+### 2. Update the package
+
+Update the dependency in your project:
+
+```sh
+npm install --save-dev gulp-tinypng-extended@4
+```
+
+Or install the exact release:
+
+```sh
+npm install --save-dev gulp-tinypng-extended@4.0.0
+```
+
+### 3. Keep your existing Gulp configuration
+
+The normal Gulp integration remains compatible:
+
+```js
+const gulp = require('gulp');
+const tinypng = require('gulp-tinypng-extended');
+
+function compressImages() {
+  return gulp.src('src/images/**/*.{png,jpg,jpeg,webp,avif}')
+    .pipe(tinypng({
+      key: process.env.TINYPNG_KEY,
+      sigFile: '.tinypng-sigs',
+      keepMetadata: true,
+      summarize: true
+    }))
+    .pipe(gulp.dest('dist/images'));
+}
+
+gulp.task('images', compressImages);
+```
+
+The existing options `key`, `sigFile`, `sameDest`, `keepOriginal`, `keepMetadata`, `force`, `ignore`, `parallel`, `parallelMax`, `retryAttempts`, `retryDelay`, `log`, `summarize`, and `summarise` remain available.
+
+### 4. Review API-key and error handling
+
+Continue supplying the key through an environment variable or CI secret:
+
+```sh
+export TINYPNG_KEY=your_api_key
+```
+
+If your build scripts inspect exact error messages from `3.0.3`, update them to handle the official Tinify error classes and the new plugin error context instead.
+
+You can add an optional preflight validation step:
+
+```js
+const tinypng = require('gulp-tinypng-extended');
+
+async function validateTinify() {
+  await tinypng.validate(process.env.TINYPNG_KEY);
+}
+```
+
+Validation is opt-in and should not be added automatically to every build unless the extra API request is intentional.
+
+### 5. Review custom tests and mocks
+
+Tests that use the documented Gulp stream API should normally continue to work. Tests that exercise the old internal HTTP methods must be updated or removed.
+
+The official API flow should be mocked with:
+
+- A `POST /shrink` response containing a `Location` header
+- A subsequent response for the compressed image, where applicable
+- Official Tinify error status codes and response formats
+
+Do not use a live API key in automated tests.
+
+### 6. Use the new format and metadata features
+
+Add modern formats to your source glob when required:
+
+```js
+gulp.src('src/images/**/*.{png,jpg,jpeg,webp,avif}')
+```
+
+Enable GPS location, copyright, and creation metadata preservation with:
+
+```js
+tinypng({
+  key: process.env.TINYPNG_KEY,
+  keepMetadata: true
+})
+```
+
+GPS location preservation applies to JPEG images supported by Tinify.
 
 ## Development
 

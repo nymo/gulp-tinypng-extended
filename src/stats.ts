@@ -1,6 +1,19 @@
-export {};
+export interface TinyPNGStats {
+    total: {
+        in: number;
+        out: number;
+    };
+    compressed: number;
+    skipped: number;
+    retries: number;
+    compressionCount: number | null;
+    retried: Array<{
+        file: string;
+        attempts: number;
+    }>;
+}
 
-function createStats() {
+export default function createStats(): TinyPNGStats {
     return {
         total: {
             in: 0,
@@ -13,5 +26,3 @@ function createStats() {
         retried: []
     };
 }
-
-module.exports = createStats;
