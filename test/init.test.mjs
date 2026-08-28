@@ -124,7 +124,7 @@ describe('tinypng', function() {
 								.post('/shrink')
 								.reply(502, '<html><head><title>502 Bad Gateway</title></head><body><h1>502 Bad Gateway</h1></body></html>');
 
-				inst.request(image).upload(function(err, data) {
+				new TinyPNG({key: key, retryAttempts: 1, retryDelay: 0}).request(image).upload(function(err, data) {
 					expect(err).to.be.instanceof(Error);
 					nock.cleanAll();
 					done();
@@ -143,22 +143,6 @@ describe('tinypng', function() {
 			});
 		});
 
-		describe('#download', function() {
-			it('downloads and returns correct buffer', function(done) {
-
-				nock('http://localhost:80')
-								.get('/files/1Mb.dat')
-								.reply(200, fs.readFileSync(cwd + '/assets/download.dat'));
-
-				inst.request(new TestFile()).download('http://localhost/files/1Mb.dat', function(err, data) {
-					expect(err).to.not.be.instanceof(Error);
-					expect(data).to.deep.equal(fs.readFileSync(cwd + '/assets/download.dat'));
-
-					nock.cleanAll();
-					done();
-				});
-			});
-		});
 
 		describe('#handler', function() {
 			it('returns correct unknown error', function() {

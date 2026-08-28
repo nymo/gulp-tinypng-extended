@@ -2,7 +2,7 @@ var test = process.env.NODE_ENV == 'test',
     through = require('through2'),
     throughParallel = require('through2-concurrent'),
     chalk = require('ansi-colors'),
-    request = require('requestretry'),
+    tinify = require('tinify'),
     path = require('path'),
     util = require('util'),
     fs = require('fs'),
@@ -55,7 +55,7 @@ function TinyPNG(opt, obj) {
     this.init = function(opt) {
         if(typeof opt !== 'object') opt = { key: opt };
 
-        opt = util._extend(this.conf.options, opt);
+        opt = Object.assign({}, this.conf.options, opt);
 
         if(!opt.key) throw new PluginError(PLUGIN_NAME, 'Missing API key!');
 
@@ -65,7 +65,12 @@ function TinyPNG(opt, obj) {
 
         this.conf.options = opt; // export opts
 
-        this.conf.token = Buffer.from('api:' + opt.key).toString('base64'); // prep key
+        this.conf.token = Buffer.from('api:' + opt.key).toString('base64'); // compatibility value
+        tinify.key = opt.key;
+        if(tinify.Client) {
+            tinify.Client.RETRY_COUNT = Math.max(0, opt.retryAttempts - 1);
+            tinify.Client.RETRY_DELAY = opt.retryDelay;
+        }
         this.hash = new this.hasher(opt.sigFile).populate(); // init hasher class
 
         return this;
@@ -173,98 +178,43 @@ function TinyPNG(opt, obj) {
     };
 
     this.request = function(file, cb) {
-        var self = this;
+        var self = this,
+            compressed;
 
         return {
             file: file,
 
             upload: function(cb) {
-                var file = this.file;
+                var file = this.file,
+                    source;
 
-                //do not process empty files
-                if(file.contents <= 0) {
-                    err = new Error('Error: Empty or broken images could not be send ' + file.relative);
-                    return cb(err);
+                if(!file || !file.contents || file.contents.length === 0) {
+                    return cb(new Error('Error: Empty or broken images could not be send ' + (file && file.relative || '')));
                 }
 
-                request.post({
-                    url: 'https://api.tinify.com/shrink',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Authorization': 'Basic ' + self.conf.token
-                    },
-                    strictSSL: false,
-                    body: file.contents,
-                    maxAttempts: self.conf.retryAttempts,
-                    retryDelay: self.conf.retryDelay,
-                    retryStrategy: request.RetryStrategies.HTTPOrNetworkError // (default) retry on 5xx or network errors
-                }, function(err, res, body) {
-                    var data,
-                        info = {
-                            url: false,
-                            count: (res && 'headers' in res && res.headers['compression-count']) || 0
-                        };
-                    if(res && res.attempts > 1){
-                        self.stats.retries += res.attempts - 1;
-                        self.stats.retried.push({
-                            file: file.relative,
-                            attempts: res.attempts
+                try {
+                    source = tinify.fromBuffer(file.contents);
+                    if(self.conf.options.keepMetadata) {
+                        source = source.preserve('copyright', 'creation');
+                    }
+
+                    source.toBuffer().then(function(data) {
+                        compressed = Buffer.from(data);
+                        cb(null, {
+                            url: true,
+                            count: tinify.compressionCount || 0
                         });
-                    }
-
-                    if(err) {
-                        err = new Error('Upload failed for ' + file.relative + ' with error: ' + err.message);
-                    } else if(body) {
-                        if(res.statusCode == 200 || res.statusCode == 201) {
-                            try {
-                                data = JSON.parse(body);
-                            } catch(e) {
-                                err = new Error('Upload response JSON parse failed, invalid data returned from API. Failed with message: ' + e.message);
-                            }
-
-                            if(!err) {
-                                if(data.error){
-                                    err = this.handler(data, res.statusCode);
-                                } else if (data.output.url) {
-                                    info.url = self.conf.options.keepMetadata ? res.headers.location : data.output.url;
-                                } else {
-                                    err = new Error('Invalid TinyPNG response object returned for ' + file.relative);
-                                }
-                            }
-                        } else {
-                            err = new Error('Error: Statuscode ' + res.statusCode + ' returned');
-                        }
-                    } else {
-                        err = new Error('No content returned from TinyPNG API for' + file.relative);
-                    }
-
-                    cb(err, info);
-                }.bind(this));
+                    }).catch(function(err) {
+                        cb(self.utils.apiError(err, file));
+                    });
+                } catch(err) {
+                    cb(self.utils.apiError(err, file));
+                }
             },
 
             download: function(url, cb) {
-                var options = {
-                    url: url,
-                    encoding: null
-                };
-
-                if (self.conf.options.keepMetadata) {
-                    options.json = { preserve: ["copyright", "creation"] };
-                    options.headers = {
-                        'Authorization': 'Basic ' + self.conf.token
-                    };
-                }
-                request.get(options, function(err, res, body) {
-                    err = err ? new Error('Download failed for ' + url + ' with error: ' + err.message) : false;
-                    var buffer = false;
-                     try {
-                        buffer = Buffer.from(body);
-                    } catch(err) {
-                        return cb(new Error('Empty Body for Download with error: ' + err.message));
-                    }
-
-                    return cb(err, buffer);
-                });
+                if(compressed) return cb(null, compressed);
+                cb(new Error('No compressed image is available for ' + (url || file.relative)));
             },
 
             handler: function(data, status) {
@@ -272,20 +222,15 @@ function TinyPNG(opt, obj) {
             },
 
             get: function(cb) {
-                var self = this,
+                var request = this,
                     file = this.file;
 
-                self.upload(function(err, data) {
+                request.upload(function(err) {
                     if(err) return cb(err, file);
 
-                    self.download(data.url, function(err, data) {
-                        if(err) return cb(err, file);
-
-                        var tinyFile = file.clone();
-                        tinyFile.contents = data;
-
-                        cb(false, tinyFile);
-                    });
+                    var tinyFile = file.clone();
+                    tinyFile.contents = compressed;
+                    cb(null, tinyFile);
                 });
 
                 return this;
@@ -356,6 +301,15 @@ function TinyPNG(opt, obj) {
             if(self.conf.options.log || force) log(PLUGIN_NAME, message);
 
             return this;
+        },
+
+        apiError: function(err, file) {
+            var message = err && err.message || 'Unknown TinyPNG API error',
+                name = err && err.name || 'Error';
+
+            return new PluginError(PLUGIN_NAME, name + ' for ' + file.relative + ': ' + message, {
+                cause: err
+            });
         },
 
         glob: function(file, glob, opt) {
