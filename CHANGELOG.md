@@ -16,6 +16,7 @@ Changes committed after `v3.0.1`:
 - Migrated the implementation to TypeScript with compiled CommonJS output and declarations.
 - Added explicit AVIF and WebP input support in the example and demo pipelines.
 - Added Tinify's monthly compression count to summarized output.
+- Added explicit promise and callback APIs for Tinify API-key validation.
 
 ## [v3.0.1] - 2020-10-05
 

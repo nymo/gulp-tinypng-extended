@@ -22,25 +22,6 @@ var PLUGIN_NAME = 'gulp-tinypng-extended',
  * TinyPNG class
 
  */
-namespace TinyPNG {
-    export interface Options {
-        key: string;
-        sigFile?: string | false;
-        sameDest?: boolean;
-        keepOriginal?: boolean;
-        keepMetadata?: boolean;
-        force?: boolean | string;
-        ignore?: boolean | string;
-        parallel?: boolean;
-        parallelMax?: number;
-        retryAttempts?: number;
-        retryDelay?: number;
-        log?: boolean;
-        summarize?: boolean;
-        summarise?: boolean;
-    }
-}
-
 function TinyPNG(opt: string | TinyPNG.Options): NodeJS.ReadWriteStream;
 function TinyPNG(opt: any, obj?: any): any {
 
@@ -258,6 +239,35 @@ function TinyPNG(opt: any, obj?: any): any {
     });
 
     return (obj || test) ? this.init(opt) : this.init(opt).stream();
+}
+
+namespace TinyPNG {
+    export interface Options {
+        key: string;
+        sigFile?: string | false;
+        sameDest?: boolean;
+        keepOriginal?: boolean;
+        keepMetadata?: boolean;
+        force?: boolean | string;
+        ignore?: boolean | string;
+        parallel?: boolean;
+        parallelMax?: number;
+        retryAttempts?: number;
+        retryDelay?: number;
+        log?: boolean;
+        summarize?: boolean;
+        summarise?: boolean;
+    }
+
+    export type ValidationCallback = (error?: Error) => void;
+
+    export function validate(key: string): Promise<void>;
+    export function validate(key: string, callback: ValidationCallback): void;
+
+    export function validate(key: string, callback?: ValidationCallback): Promise<void> | void {
+        tinify.key = key;
+        return tinify.validate(callback);
+    }
 }
 
 export = TinyPNG;
