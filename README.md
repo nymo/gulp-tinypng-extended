@@ -537,7 +537,6 @@ Check the files that will be published:
 npm pack --dry-run
 ```
 
-The repository also contains a small end-to-end demo project in [`../gulp-tinypng-extended-demo`](../gulp-tinypng-extended-demo). A live demo run requires a real API key and consumes Tinify quota.
 
 ## License
 
